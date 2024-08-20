@@ -5,6 +5,10 @@ description = ""
 authors = ["hao <ahmed.ait.ouazzou@protonmail.com>"]
 readme = "README.md"
 
+packages = [
+    { include = "mon_module", from = "src" }
+]
+
 [tool.poetry.dependencies]
 python = "^3.10"
 
