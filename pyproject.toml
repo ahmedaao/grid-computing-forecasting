@@ -3,14 +3,16 @@ name = "grid-computing-forecasting"
 version = "0.1.0"
 description = ""
 authors = ["hao <ahmed.ait.ouazzou@protonmail.com>"]
+packages = [{include = "grid_computing_forecasting", from = "src"}]
 readme = "README.md"
 
-packages = [
-    { include = "mon_module", from = "src" }
-]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.13"
+pandas = "^2.2.2"
+pyarrow = "^17.0.0"
+python-dotenv = "^1.0.1"
+ydata-profiling = "^4.9.0"
 
 
 [build-system]

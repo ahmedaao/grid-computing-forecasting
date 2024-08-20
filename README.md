@@ -7,7 +7,8 @@
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Methods](#methods)
+2. [DataSource](#datasource)
+3. [Methods](#methods)
     - [Method 1: BeautifulSoup and Requests](#method-1-beautifulsoup-and-requests)
     - [Method 2: Scrapy](#method-2-scrapy)
 
@@ -15,6 +16,11 @@
 ## Introduction
 
 Our project aims to predict the future usage of resources in a computing farm. The farm consists of a collection of CPUs waiting to run jobs.
+
+## DataSource
+
+Datasource: GWA-T-3 trace in SQLite format [here](http://gwa.ewi.tudelft.nl/datasets/gwa-t-3-nordugrid)
+
 
 ## Methods
 
