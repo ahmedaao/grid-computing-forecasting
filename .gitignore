@@ -1,6 +1,9 @@
 # data
 data/raw/
 
+# reports
+reports/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
