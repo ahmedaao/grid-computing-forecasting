@@ -15,11 +15,11 @@
 
 ## Introduction
 
-Our project aims to predict the future usage of resources in a computing farm. The farm consists of a collection of CPUs waiting to run jobs.
+Our project aims to predict the future used of CPU time in a computing farm. The farm consists of a collection of CPUs waiting to run jobs.
 
 ## DataSource
 
-Datasource: GWA-T-3 trace in SQLite format [here](http://gwa.ewi.tudelft.nl/datasets/gwa-t-3-nordugrid)
+Datasource: GWA-T-1 trace in SQLite format [here](http://gwa.ewi.tudelft.nl/datasets/gwa-t-1-das2)
 
 
 ## Methods
