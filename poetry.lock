@@ -1687,6 +1687,16 @@ files = [
 ]
 
 [[package]]
+name = "sns"
+version = "0.1"
+description = "SNS utils"
+optional = false
+python-versions = "*"
+files = [
+    {file = "sns-0.1.tar.gz", hash = "sha256:2d847d23eb8e0ea20054dbadabdecfafc529e4c7a16a6ce70205c4bf8ebc6cf4"},
+]
+
+[[package]]
 name = "stack-data"
 version = "0.6.3"
 description = "Extract data from python stack frames and tracebacks for informative displays"
@@ -2010,4 +2020,4 @@ unicode = ["tangled-up-in-unicode (==0.2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "d483dc8c0a49909d5411e717fbf9f416dd48549827c4ed49527255ab2d027794"
+content-hash = "1e99d8e7ea6c546aec836ce1e79c624ac50979ab4a461c8bd8ae1750ffc78d4e"
