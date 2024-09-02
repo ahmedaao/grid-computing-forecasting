@@ -2020,4 +2020,4 @@ unicode = ["tangled-up-in-unicode (==0.2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "1e99d8e7ea6c546aec836ce1e79c624ac50979ab4a461c8bd8ae1750ffc78d4e"
+content-hash = "50f78987d4ce986bfc8529a259af3adfbb2c1a4d2e15c2d27a5f2bc5097e0735"
