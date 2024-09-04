@@ -42,7 +42,10 @@ def remove_negative_rows(df: pd.DataFrame, column: str) -> pd.DataFrame:
     :return: Pandas DataFrame with rows containing negative values in the specified column removed
     """
     # Filter the DataFrame to keep only rows where the specified column has non-negative values
-    return df[df[column] >= 0]
+    filtered_df = df[df[column] >= 0]
+
+    # Reset the index of the filtered DataFrame
+    return filtered_df.reset_index(drop=True)
 
 
 def keep_finished_jobs(df: pd.DataFrame, column: str) -> pd.DataFrame:
@@ -92,8 +95,7 @@ def aggregate_by_time(df: pd.DataFrame, time_column: str, period: str) -> pd.Dat
     pd.DataFrame: The aggregated DataFrame.
     """
     # Convert 'SubmitTime' column to datetime
-    df_sorted = df.sort_values(by='SubmitTime')
-    df_sorted['SubmitTime'] = pd.to_datetime(df_sorted['SubmitTime'], unit='s')
+    df_sorted = df.sort_values(by=time_column)
 
     # Set the time_column as the index
     df_sorted.set_index(time_column, inplace=True)
@@ -122,22 +124,25 @@ def split_datetime(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         A DataFrame with the 'SubmitTime' column converted to datetime format and sorted in ascending order by 'SubmitTime'.
     """
+    # Convert column "SubmitTime" to timestamp
+    df["Timestamp"] = pd.to_datetime(df["SubmitTime"], unit='s')
     # Extract year, month, day, hour, minute, and second into separate columns
-    df['Year'] = df['SubmitTime'].dt.year
-    df['Month'] = df['SubmitTime'].dt.month
-    df['Day'] = df['SubmitTime'].dt.day
-    df['Hour'] = df['SubmitTime'].dt.hour
-    # df['Minute'] = df['SubmitTime'].dt.minute
-    # df['Second'] = df['SubmitTime'].dt.second
+    # df['Year'] = df['SubmitTime'].dt.year
+    df['Month'] = df['Timestamp'].dt.month
+    df['Day'] = df['Timestamp'].dt.day
+    df['Hour'] = df['Timestamp'].dt.hour
+    df['Minute'] = df['Timestamp'].dt.minute
+    # df['Second'] = df['Timestamp'].dt.second
 
     # Rearrange columns
     columns_order = [
         # 'JobID',
-        'SubmitTime',
-        'Year',
+        # 'SubmitTime',
+        'Timestamp',
         'Month',
         'Day',
         'Hour',
+        'Minute',
         'RunTime',
         'ReqNProcs',
         'ReqTime',
