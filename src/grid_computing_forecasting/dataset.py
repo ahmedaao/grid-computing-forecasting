@@ -1,4 +1,8 @@
 import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 # Dataset cleaning
@@ -21,8 +25,8 @@ def keep_useful_features(dataframe: pd.DataFrame) -> pd.DataFrame:
         'ReqTime',
         # 'ReqMemory',
         'Status',
-        # 'UserID', too much values
-        'GroupID',
+        'UserID',
+        # 'GroupID',
         # 'ExecutableID', too much values
         # 'QueueID',
         # 'OrigSiteID',
@@ -62,6 +66,93 @@ def keep_finished_jobs(df: pd.DataFrame, column: str) -> pd.DataFrame:
     df_filtered = df_filtered.drop(columns=[column])
 
     return df_filtered
+
+
+def filter_top_n_users(df: pd.DataFrame, n: int) -> pd.DataFrame:
+    """
+    Filters the dataframe to retain only the rows corresponding to the top 'n' most frequent UserIDs.
+
+    Parameters:
+    df (pd.DataFrame): The input dataframe containing at least a 'UserID' column.
+    n (int): The number of top most frequent UserIDs to retain.
+
+    Returns:
+    pd.DataFrame: A new dataframe filtered to include only rows with the top 'n' most frequent UserIDs.
+    """
+    # Count the occurrences of each UserID
+    user_counts = df['UserID'].value_counts()
+
+    # Get the top 'n' most frequent UserIDs
+    top_n_users = user_counts.index[:n]
+
+    # Filter the dataframe to retain only rows with the top 'n' UserIDs
+    filtered_df = df[df['UserID'].isin(top_n_users)]
+
+    return filtered_df
+
+
+def plot_boxplot(df: pd.DataFrame, x_axis: str, y_axis: str):
+    """
+    Creates a boxplot based on the columns of the dataframe.
+
+    :param dataframe: Pandas DataFrame containing the data
+    :param x_axis: Name of the column for the x-axis
+    :param y_axis: Name of the column for the y-axis
+    """
+    # Set the figure size for better visualization
+    plt.figure(figsize=(10, 5))
+
+    # Create the boxplot using seaborn
+    sns.boxplot(x=x_axis, y=y_axis, data=df)
+
+    # Add title and labels
+    plt.title(f'Boxplot of {y_axis} by {x_axis}')
+    plt.xlabel(x_axis)
+    plt.ylabel(y_axis)
+
+    # Rotate x-axis labels for better readability if necessary
+    plt.xticks(rotation=90)
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+
+def remove_outliers_by_userid(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes outliers from the 'RunTime' column for each UserID based on the IQR method.
+
+    Parameters:
+    df (pd.DataFrame): The input dataframe containing 'RunTime' and 'UserID' columns.
+
+    Returns:
+    pd.DataFrame: A dataframe with outliers removed from the 'RunTime' column for each UserID.
+    """
+    # Initialize an empty list to store filtered data
+    filtered_df = pd.DataFrame()
+
+    # Loop through each UserID group
+    for user_id, group in df.groupby('UserID'):
+        # Calculate Q1 (25th percentile) and Q3 (75th percentile)
+        Q1 = group['RunTime'].quantile(0.25)
+        Q3 = group['RunTime'].quantile(0.75)
+
+        # Calculate the IQR
+        IQR = Q3 - Q1
+
+        # Define the lower and upper bounds for outliers
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        # Filter the group to remove outliers
+        filtered_group = group[(group['RunTime'] >= lower_bound) & (group['RunTime'] <= upper_bound)]
+
+        # Append the filtered group to the filtered dataframe
+        filtered_df = pd.concat([filtered_df, filtered_group])
+
+    return filtered_df
 
 
 # Features engineering
@@ -146,18 +237,16 @@ def split_datetime(df: pd.DataFrame) -> pd.DataFrame:
         'RunTime',
         'ReqNProcs',
         'ReqTime',
-        'GroupID_G0',
-        'GroupID_G1',
-        'GroupID_G2',
-        'GroupID_G3',
-        'GroupID_G4',
-        'GroupID_G5',
-        'GroupID_G6',
-        'GroupID_G7',
-        'GroupID_G8',
-        'GroupID_G9',
-        'GroupID_G10',
-        'GroupID_G11',
+        'UserID_U0',
+        'UserID_U139',
+        'UserID_U173',
+        'UserID_U193',
+        'UserID_U239',
+        'UserID_U265',
+        'UserID_U6',
+        'UserID_U66',
+        'UserID_U69',
+        'UserID_U84',
         'JobStructure_BoT',
         'JobStructure_UNITARY'
     ]
@@ -165,3 +254,36 @@ def split_datetime(df: pd.DataFrame) -> pd.DataFrame:
     df = df[columns_order]
 
     return df
+
+
+def calculate_rmse_per_user(df: pd.DataFrame, medians_dict: dict) -> dict:
+    """
+    This function calculates the RMSE for each UserGroup based on the provided medians.
+
+    Parameters:
+    df: pandas DataFrame - The input DataFrame containing RunTime and GroupID columns.
+    medians_dict: dict - A dictionary with the median values for each UserGroup.
+
+    Returns:
+    rmse_dict: dict - A dictionary containing the RMSE for each UserGroup.
+    """
+    rmse_dict = {}
+
+    # Loop through each group in the median dictionary
+    for group, median_value in medians_dict.items():
+        if pd.isna(median_value):  # Skip if the median is NaN
+            continue
+
+        # Filter the rows where the group has value 1
+        group_data = df[df[group] == 1]
+
+        # Check if there are any data points for this group
+        if not group_data.empty:
+            # Calculate RMSE for this group
+            rmse = np.sqrt(np.mean((group_data['RunTime'] - median_value) ** 2))
+            rmse_dict[group] = rmse
+        else:
+            # If no data points, set RMSE to NaN
+            rmse_dict[group] = np.nan
+
+    return rmse_dict
