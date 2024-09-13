@@ -26,12 +26,12 @@ def keep_useful_features(dataframe: pd.DataFrame) -> pd.DataFrame:
         # 'ReqMemory',
         'Status',
         'UserID',
-        # 'GroupID',
-        # 'ExecutableID', too much values
-        # 'QueueID',
-        # 'OrigSiteID',
-        'JobStructure'
-        # 'JobStructureParams' too much values
+        'GroupID',
+        'ExecutableID',
+        'QueueID',
+        'OrigSiteID',
+        'JobStructure',
+        # 'JobStructureParams',
     ]]
 
     return df
@@ -80,13 +80,33 @@ def filter_top_n_users(df: pd.DataFrame, n: int) -> pd.DataFrame:
     pd.DataFrame: A new dataframe filtered to include only rows with the top 'n' most frequent UserIDs.
     """
     # Count the occurrences of each UserID
-    user_counts = df['UserID'].value_counts()
+    user_counts = df['ExecutableID'].value_counts()
 
     # Get the top 'n' most frequent UserIDs
     top_n_users = user_counts.index[:n]
 
     # Filter the dataframe to retain only rows with the top 'n' UserIDs
-    filtered_df = df[df['UserID'].isin(top_n_users)]
+    filtered_df = df[df['ExecutableID'].isin(top_n_users)]
+
+    return filtered_df
+
+
+def filter_non_zero_runtime(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Filters the input dataframe to retain only rows where the 'RunTime' column has a non-zero value.
+
+    Parameters:
+    df (pd.DataFrame): The input dataframe containing at least a 'RunTime' column.
+
+    Returns:
+    pd.DataFrame: A new dataframe with only rows where 'RunTime' is not zero.
+    """
+    # Ensure the dataframe has a 'RunTime' column
+    if 'RunTime' not in df.columns:
+        raise ValueError("The input dataframe must contain a 'RunTime' column.")
+
+    # Filter the rows where 'RunTime' is different from 0
+    filtered_df = df[df['RunTime'] != 0]
 
     return filtered_df
 
@@ -120,21 +140,21 @@ def plot_boxplot(df: pd.DataFrame, x_axis: str, y_axis: str):
     plt.show()
 
 
-def remove_outliers_by_userid(df: pd.DataFrame) -> pd.DataFrame:
+def remove_outliers_by_app(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Removes outliers from the 'RunTime' column for each UserID based on the IQR method.
+    Removes outliers from the 'RunTime' column for each executableID based on the IQR method.
 
     Parameters:
-    df (pd.DataFrame): The input dataframe containing 'RunTime' and 'UserID' columns.
+    df (pd.DataFrame): The input dataframe containing 'RunTime' and 'ExecutableID' columns.
 
     Returns:
-    pd.DataFrame: A dataframe with outliers removed from the 'RunTime' column for each UserID.
+    pd.DataFrame: A dataframe with outliers removed from the 'RunTime' column for each ExecutableID.
     """
     # Initialize an empty list to store filtered data
     filtered_df = pd.DataFrame()
 
     # Loop through each UserID group
-    for user_id, group in df.groupby('UserID'):
+    for executable_id, group in df.groupby('ExecutableID'):
         # Calculate Q1 (25th percentile) and Q3 (75th percentile)
         Q1 = group['RunTime'].quantile(0.25)
         Q3 = group['RunTime'].quantile(0.75)
@@ -218,40 +238,23 @@ def split_datetime(df: pd.DataFrame) -> pd.DataFrame:
     # Convert column "SubmitTime" to timestamp
     df["Timestamp"] = pd.to_datetime(df["SubmitTime"], unit='s')
     # Extract year, month, day, hour, minute, and second into separate columns
-    # df['Year'] = df['SubmitTime'].dt.year
+    df['Year'] = df['Timestamp'].dt.year
     df['Month'] = df['Timestamp'].dt.month
     df['Day'] = df['Timestamp'].dt.day
     df['Hour'] = df['Timestamp'].dt.hour
     df['Minute'] = df['Timestamp'].dt.minute
-    # df['Second'] = df['Timestamp'].dt.second
 
-    # Rearrange columns
-    columns_order = [
-        # 'JobID',
-        # 'SubmitTime',
-        'Timestamp',
-        'Month',
-        'Day',
-        'Hour',
-        'Minute',
-        'RunTime',
-        'ReqNProcs',
-        'ReqTime',
-        'UserID_U0',
-        'UserID_U139',
-        'UserID_U173',
-        'UserID_U193',
-        'UserID_U239',
-        'UserID_U265',
-        'UserID_U6',
-        'UserID_U66',
-        'UserID_U69',
-        'UserID_U84',
-        'JobStructure_BoT',
-        'JobStructure_UNITARY'
-    ]
+    # Remove the 'SubmitTime' column
+    df = df.drop(columns=['SubmitTime'])
 
-    df = df[columns_order]
+    # Time-related columns
+    time_columns = ['Timestamp', 'Year', 'Month', 'Day', 'Hour', 'Minute']
+
+    # Other columns (everything except the time-related columns)
+    other_columns = [col for col in df.columns if col not in time_columns]
+
+    # Rearrange columns: put time-related columns at the beginning
+    df = df[time_columns + other_columns]
 
     return df
 
@@ -287,3 +290,66 @@ def calculate_rmse_per_user(df: pd.DataFrame, medians_dict: dict) -> dict:
             rmse_dict[group] = np.nan
 
     return rmse_dict
+
+
+from sklearn.metrics import mean_absolute_error
+
+def calculate_mae_per_userid(df, medians_dict):
+    """
+    Calculate the Mean Absolute Error (MAE) between the 'RunTime' column in the dataframe 
+    and the provided median values for each UserID using sklearn's mean_absolute_error.
+
+    Parameters:
+    df (pd.DataFrame): A pandas DataFrame containing 'RunTime' and UserID columns.
+    medians_dict (dict): A dictionary where keys are UserID column names and values are the medians 
+                         for those UserIDs.
+
+    Returns:
+    dict: A dictionary with UserID as keys and their corresponding MAE as values.
+          If a UserID has no records or the median is NaN, its value will be None.
+    """
+    # Create a dictionary to store MAE for each UserID
+    mae_dict = {}
+
+    # Iterate over each UserID in the medians dictionary
+    for user_id, median in medians_dict.items():
+        if pd.isna(median):  # Skip if the median is NaN
+            continue
+
+        # Filter rows where the current UserID is present (column has value 1)
+        user_data = df[df[user_id] == 1]
+
+        if not user_data.empty:
+            # Compute MAE using sklearn's mean_absolute_error function
+            mae = mean_absolute_error(user_data['RunTime'], np.full(len(user_data), median))
+            mae_dict[user_id] = mae
+        else:
+            # If no records are found for the UserID, set MAE to None
+            mae_dict[user_id] = None
+
+    return mae_dict
+
+
+def sort_dataframe_by_timestamp(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Sorts a pandas DataFrame based on the 'Timestamp' column in chronological order.
+
+    This function takes a DataFrame that contains a 'Timestamp' column and sorts it 
+    in ascending order based on that column. It then resets the index to ensure a 
+    continuous index in the sorted DataFrame.
+
+    Args:
+        df (pd.DataFrame): The input pandas DataFrame containing a 'Timestamp' column.
+
+    Returns:
+        pd.DataFrame: The sorted DataFrame with rows arranged in chronological order
+                      based on the 'Timestamp' column and a reset index.
+    """
+
+    # Sort the DataFrame based on the 'Timestamp' column
+    df_sorted = df.sort_values(by='Timestamp')
+
+    # Reset the index to ensure a continuous index after sorting
+    df_sorted.reset_index(drop=True, inplace=True)
+
+    return df_sorted
