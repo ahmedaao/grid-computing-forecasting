@@ -84,6 +84,3 @@ def xgboost(df: pd.DataFrame, path_save: str, model_name: str):
 
     # Return the best model
     return best_model
-
-# Example usage:
-# best_model = train_xgboost_model(df_ML, "./models", "xgboost_best_model")
