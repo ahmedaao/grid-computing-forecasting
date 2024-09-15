@@ -1,5 +1,5 @@
+import os
 import pandas as pd
-import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -17,13 +17,10 @@ def keep_useful_features(dataframe: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame: A DataFrame containing only the selected useful features.
     """
     df = dataframe[[
-        # 'JobID',
         'SubmitTime',
-        # 'WaitTime',
         'RunTime',
         'ReqNProcs',
         'ReqTime',
-        # 'ReqMemory',
         'Status',
         'UserID',
         'GroupID',
@@ -31,7 +28,6 @@ def keep_useful_features(dataframe: pd.DataFrame) -> pd.DataFrame:
         'QueueID',
         'OrigSiteID',
         'JobStructure',
-        # 'JobStructureParams',
     ]]
 
     return df
@@ -68,25 +64,25 @@ def keep_finished_jobs(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return df_filtered
 
 
-def filter_top_n_users(df: pd.DataFrame, n: int) -> pd.DataFrame:
+def filter_top_n_apps(df: pd.DataFrame, n: int) -> pd.DataFrame:
     """
-    Filters the dataframe to retain only the rows corresponding to the top 'n' most frequent UserIDs.
+    Filters the dataframe to retain only the rows corresponding to the top 'n' most frequent ExecutableID.
 
     Parameters:
-    df (pd.DataFrame): The input dataframe containing at least a 'UserID' column.
-    n (int): The number of top most frequent UserIDs to retain.
+    df (pd.DataFrame): The input dataframe containing at least a 'ExecutableID' column.
+    n (int): The number of top most frequent ExecutableIDs to retain.
 
     Returns:
-    pd.DataFrame: A new dataframe filtered to include only rows with the top 'n' most frequent UserIDs.
+    pd.DataFrame: A new dataframe filtered to include only rows with the top 'n' most frequent ExecutableIDs.
     """
-    # Count the occurrences of each UserID
-    user_counts = df['ExecutableID'].value_counts()
+    # Count the occurrences of each ExecutableID
+    app_counts = df['ExecutableID'].value_counts()
 
-    # Get the top 'n' most frequent UserIDs
-    top_n_users = user_counts.index[:n]
+    # Get the top 'n' most frequent ExecutableIDs
+    top_n_apps = app_counts.index[:n]
 
-    # Filter the dataframe to retain only rows with the top 'n' UserIDs
-    filtered_df = df[df['ExecutableID'].isin(top_n_users)]
+    # Filter the dataframe to retain only rows with the top 'n' ExecutableIDs
+    filtered_df = df[df['ExecutableID'].isin(top_n_apps)]
 
     return filtered_df
 
@@ -111,68 +107,62 @@ def filter_non_zero_runtime(df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
-def plot_boxplot(df: pd.DataFrame, x_axis: str, y_axis: str):
+def plot_boxplot(df: pd.DataFrame, column: str, save_path: str, file_name: str):
     """
-    Creates a boxplot based on the columns of the dataframe.
+    Creates a boxplot for a given column in a DataFrame.
 
-    :param dataframe: Pandas DataFrame containing the data
-    :param x_axis: Name of the column for the x-axis
-    :param y_axis: Name of the column for the y-axis
+    Parameters:
+    df (pd.DataFrame): The DataFrame containing the data.
+    column (str): The name of the column to be plotted in the boxplot.
+    save_path (str): The directory path where the figure will be saved.
+    file_name (str): The name of the file to save the plot as.
+
+    Returns:
+    None
     """
-    # Set the figure size for better visualization
-    plt.figure(figsize=(10, 5))
+    # Set the figure size
+    plt.figure(figsize=(6, 4))
+    # Create the boxplot
+    sns.boxplot(y=df[column])
+    # Set the title and labels
+    plt.title(f'Boxplot of {column} for all applications')
+    plt.ylabel(column)
 
-    # Create the boxplot using seaborn
-    sns.boxplot(x=x_axis, y=y_axis, data=df)
+    # Ensure the directory exists
+    os.makedirs(save_path, exist_ok=True)
+    # Construct the full file path
+    full_path = os.path.join(save_path, file_name)
+    # Save the plot to the specified path
+    plt.savefig(full_path)
 
-    # Add title and labels
-    plt.title(f'Boxplot of {y_axis} by {x_axis}')
-    plt.xlabel(x_axis)
-    plt.ylabel(y_axis)
-
-    # Rotate x-axis labels for better readability if necessary
-    plt.xticks(rotation=90)
-
-    # Adjust layout for better spacing
-    plt.tight_layout()
-
-    # Show the plot
+    # Display the plot
     plt.show()
 
 
-def remove_outliers_by_app(df: pd.DataFrame) -> pd.DataFrame:
+def df_remove_outliers(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
-    Removes outliers from the 'RunTime' column for each executableID based on the IQR method.
+    Removes outliers based on the IQR method in a DataFrame
 
     Parameters:
-    df (pd.DataFrame): The input dataframe containing 'RunTime' and 'ExecutableID' columns.
+    df (pd.DataFrame): The DataFrame containing the data.
+    column (str): The name of the column to be processed and plotted.
 
     Returns:
-    pd.DataFrame: A dataframe with outliers removed from the 'RunTime' column for each ExecutableID.
+    pd.DataFrame: A DataFrame without outliers for the specified column.
     """
-    # Initialize an empty list to store filtered data
-    filtered_df = pd.DataFrame()
+    # Calculate quartiles and IQR
+    Q1 = df[column].quantile(0.25)
+    Q3 = df[column].quantile(0.75)
+    IQR = Q3 - Q1
 
-    # Loop through each UserID group
-    for executable_id, group in df.groupby('ExecutableID'):
-        # Calculate Q1 (25th percentile) and Q3 (75th percentile)
-        Q1 = group['RunTime'].quantile(0.25)
-        Q3 = group['RunTime'].quantile(0.75)
+    # Define outlier boundaries
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
 
-        # Calculate the IQR
-        IQR = Q3 - Q1
+    # Filter out outliers
+    df_filtered = df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
 
-        # Define the lower and upper bounds for outliers
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-
-        # Filter the group to remove outliers
-        filtered_group = group[(group['RunTime'] >= lower_bound) & (group['RunTime'] <= upper_bound)]
-
-        # Append the filtered group to the filtered dataframe
-        filtered_df = pd.concat([filtered_df, filtered_group])
-
-    return filtered_df
+    return df_filtered
 
 
 # Features engineering
@@ -257,77 +247,6 @@ def split_datetime(df: pd.DataFrame) -> pd.DataFrame:
     df = df[time_columns + other_columns]
 
     return df
-
-
-def calculate_rmse_per_user(df: pd.DataFrame, medians_dict: dict) -> dict:
-    """
-    This function calculates the RMSE for each UserGroup based on the provided medians.
-
-    Parameters:
-    df: pandas DataFrame - The input DataFrame containing RunTime and GroupID columns.
-    medians_dict: dict - A dictionary with the median values for each UserGroup.
-
-    Returns:
-    rmse_dict: dict - A dictionary containing the RMSE for each UserGroup.
-    """
-    rmse_dict = {}
-
-    # Loop through each group in the median dictionary
-    for group, median_value in medians_dict.items():
-        if pd.isna(median_value):  # Skip if the median is NaN
-            continue
-
-        # Filter the rows where the group has value 1
-        group_data = df[df[group] == 1]
-
-        # Check if there are any data points for this group
-        if not group_data.empty:
-            # Calculate RMSE for this group
-            rmse = np.sqrt(np.mean((group_data['RunTime'] - median_value) ** 2))
-            rmse_dict[group] = rmse
-        else:
-            # If no data points, set RMSE to NaN
-            rmse_dict[group] = np.nan
-
-    return rmse_dict
-
-
-from sklearn.metrics import mean_absolute_error
-
-def calculate_mae_per_userid(df, medians_dict):
-    """
-    Calculate the Mean Absolute Error (MAE) between the 'RunTime' column in the dataframe 
-    and the provided median values for each UserID using sklearn's mean_absolute_error.
-
-    Parameters:
-    df (pd.DataFrame): A pandas DataFrame containing 'RunTime' and UserID columns.
-    medians_dict (dict): A dictionary where keys are UserID column names and values are the medians 
-                         for those UserIDs.
-
-    Returns:
-    dict: A dictionary with UserID as keys and their corresponding MAE as values.
-          If a UserID has no records or the median is NaN, its value will be None.
-    """
-    # Create a dictionary to store MAE for each UserID
-    mae_dict = {}
-
-    # Iterate over each UserID in the medians dictionary
-    for user_id, median in medians_dict.items():
-        if pd.isna(median):  # Skip if the median is NaN
-            continue
-
-        # Filter rows where the current UserID is present (column has value 1)
-        user_data = df[df[user_id] == 1]
-
-        if not user_data.empty:
-            # Compute MAE using sklearn's mean_absolute_error function
-            mae = mean_absolute_error(user_data['RunTime'], np.full(len(user_data), median))
-            mae_dict[user_id] = mae
-        else:
-            # If no records are found for the UserID, set MAE to None
-            mae_dict[user_id] = None
-
-    return mae_dict
 
 
 def sort_dataframe_by_timestamp(df: pd.DataFrame) -> pd.DataFrame:
