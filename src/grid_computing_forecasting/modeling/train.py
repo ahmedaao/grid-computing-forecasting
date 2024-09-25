@@ -1,9 +1,12 @@
 import os
 import joblib
+import torch
 import pandas as pd
+import numpy as np
 from xgboost import XGBRegressor
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, train_test_split
 from sklearn.metrics import mean_absolute_error
+from grid_computing_forecasting import config
 
 
 def xgboost(df: pd.DataFrame, path_save: str, model_name: str):
@@ -48,7 +51,7 @@ def xgboost(df: pd.DataFrame, path_save: str, model_name: str):
     tscv = TimeSeriesSplit(n_splits=5)
 
     # Set up GridSearchCV with the model and hyperparameter grid
-    grid_search = GridSearchCV(estimator=xgboost_model, param_grid=param_grid, 
+    grid_search = GridSearchCV(estimator=xgboost_model, param_grid=param_grid,
                                scoring='neg_mean_absolute_error', cv=tscv, n_jobs=-1, verbose=1)
 
     # Fit the model
@@ -84,3 +87,50 @@ def xgboost(df: pd.DataFrame, path_save: str, model_name: str):
 
     # Return the best model
     return best_model
+
+
+# Grownet model
+class MoADataset:
+    def __init__(self, features, targets):
+        self.features = features
+        self.targets = targets
+
+    def __len__(self):
+        return (self.features.shape[0])
+
+    def __getitem__(self, idx):
+        dct = {
+            'x': torch.tensor(self.features[idx, :], dtype=torch.float),
+            'y': torch.tensor(self.targets[idx, :], dtype=torch.float)
+        }
+        return dct
+
+
+class TestDataset:
+    def __init__(self, features):
+        self.features = features
+
+    def __len__(self):
+        return (self.features.shape[0])
+
+    def __getitem__(self, idx):
+        dct = {
+            'x': torch.tensor(self.features[idx, :], dtype=torch.float)
+        }
+        return dct
+
+
+def grownet(df: pd.DataFrame):
+    df = df.drop(columns=['Timestamp'])
+    # Split the DataFrame into train and test sets
+    df_train, df_test = train_test_split(df, test_size=0.43, random_state=42)
+
+    # Convert DataFrame to NPZ format
+    np.savez('./../data/interim/dataset_tr.npz',
+             data=df_train.to_numpy(),
+             columns=df_train.columns.to_numpy())
+    np.savez('./../data/interim/dataset_te.npz',
+             data=df_test.to_numpy(),
+             columns=df_test.columns.to_numpy())
+
+    return None
