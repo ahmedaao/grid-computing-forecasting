@@ -127,10 +127,10 @@ def grownet(df: pd.DataFrame):
 
     # Convert DataFrame to NPZ format
     np.savez('./../data/interim/dataset_tr.npz',
-             data=df_train.to_numpy(),
-             columns=df_train.columns.to_numpy())
+             features=(df_train.drop(columns=['RunTime'])).to_numpy(),
+             labels=(df_train[['RunTime']]).to_numpy())
     np.savez('./../data/interim/dataset_te.npz',
-             data=df_test.to_numpy(),
-             columns=df_test.columns.to_numpy())
+             features=(df_test.drop(columns=['RunTime'])).to_numpy(),
+             labels=(df_test[['RunTime']]).to_numpy())
 
     return None

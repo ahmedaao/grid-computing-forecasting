@@ -11,6 +11,7 @@
 3. [Methods](#methods)
     - [Method 1: Benchmark Median](#method-1-benchmark-median)
     - [Method 2: XGBoost](#method-2-xgboost)
+    - [Method 3: Grownet](#grownet)
 4. [Result](#result)
 
 
@@ -36,16 +37,18 @@ Datasource: GWA-T-1 trace in SQLite format [here](http://gwa.ewi.tudelft.nl/data
 We calculated the median of the past 'RunTime' for all jobs to make an approximate estimate.
 
 ### Method 2: XGBoost Regressor algorithm
-XGBoost is an ensemble method that is very popular in ML. We will test it to improve the previous benchmark (simple median)
+XGBoost is an ensemble method that is very popular in ML. We will test it to improve the previous benchmark (simple median)  
+
+### Method 3: Grownet
+Grownet is a Neural Networks Gradient Boosting algorithm which uses neural networks as weak learners rather than decision trees. 
 
 
 ## Result
 ```markdown
-| Model             | MAE     |
-|-------------------|---------|
-| Benchmark         | 46.73   |
-| XGBoost Train     | 44.73   |
-| XGBoost Test      | 45.17   |
-| Other             |         |
+| Model      | Benchmark | XGBoost  | Grownet  |
+|------------|-----------|----------|----------| 
+| Train      | 46.73     | 44.73    | 33.00    |
+| Test       | 46.73     | 45.17    | 32.49    |
+| Train Time | 5s        | 10min35s | 85min28s |
 ```
 *MAE: Mean Absolute Error
