@@ -3,6 +3,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import _pickle as cPickle
 
 
 # Dataset cleaning
@@ -272,3 +273,35 @@ def sort_dataframe_by_timestamp(df: pd.DataFrame) -> pd.DataFrame:
     df_sorted.reset_index(drop=True, inplace=True)
 
     return df_sorted
+
+
+def create_dataframe_sample(df: pd.DataFrame, n: int, save_path: str, file_name: str) -> pd.DataFrame:
+    """
+    Selects a random sample of `n` rows from the given DataFrame
+    and saves it to a specified path in pickle format.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The input DataFrame from which rows will be randomly sampled.
+    n : int
+        The number of rows to sample from the DataFrame.
+    Returns:
+    ----------
+    None
+    """
+    # Ensure the directory exists
+    os.makedirs(save_path, exist_ok=True)
+    # Construct the full file path
+    full_path = os.path.join(save_path, file_name)
+
+    # Select a random sample of n rows
+    df_sample = df.sample(n=n, random_state=42)
+    # Save the sampled DataFrame to the specified path
+    df_sample.to_pickle(full_path)
+
+
+def load_pickle_file(file_path):
+    with open(file_path, 'rb') as file:
+        data = cPickle.load(file)
+    return data
