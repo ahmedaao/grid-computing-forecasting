@@ -8,6 +8,8 @@ packages = [{include = "grid_computing_forecasting", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+beautifulsoup4 = "^4.12.3"
+mysqlclient = {version = "^2.2.5", optional = true}
 
 
 [build-system]
