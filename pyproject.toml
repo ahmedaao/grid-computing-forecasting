@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "grid-computing-forecasting"
+version = "0.1.0"
+description = ""
+authors = ["hao <ahmed.ait.ouazzou@protonmail.com>"]
+readme = "README.md"
+packages = [{include = "grid_computing_forecasting", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
