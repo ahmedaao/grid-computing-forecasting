@@ -29,8 +29,6 @@ class Item(BaseModel):
 def grownet_prediction(request: Item):
     job_id = request.job_id
 
-    result = predict.with_xgboost(
-        config.root_dir, "models/xgboost.pkl", df.iloc[job_id]
-    )
+    result = predict.with_xgboost(config.root_dir, "models/xgboost.pkl", df.loc[job_id])
 
     return {"prediction": float(result)}
