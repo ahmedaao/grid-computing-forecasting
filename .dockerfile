@@ -1,5 +1,7 @@
-data/
+.mypy_cache
+.venv
+data/raw
 notebooks/
 tests/
-.git
+.gitignore
 README.md

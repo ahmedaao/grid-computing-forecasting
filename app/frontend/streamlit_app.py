@@ -53,7 +53,11 @@ def prediction_page():
     endpoint = st.sidebar.selectbox("Choose the API endpoint", ["prediction"])
 
     # Define URL based on running environment
-    url = f"http://127.0.0.1:8000/{endpoint}"
+    # url = f"http://0.0.0.0:8000/{endpoint}"
+    # url = f"http://127.0.0.1:8000/{endpoint}"
+
+    # When running containers through docker-compose to combine them
+    url = f"http://backend:8000/{endpoint}"
 
     headers = {"Content-Type": "application/json"}
     result_json = json.dumps(result)
