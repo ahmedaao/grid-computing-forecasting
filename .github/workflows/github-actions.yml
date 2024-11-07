@@ -1,0 +1,97 @@
+# Here is an example of an AWS EC2 machine where we can deploy our containers using GitHub Actions:
+# Public IPv4 DNS: ec2-34-231-155-96.compute-1.amazonaws.com
+# Public IPv4 address: 34.231.155.96
+# shell prompt: ubuntu@ip-172-31-37-178
+
+# In GitHub secrets, you need to enter the following values:
+# AWS_HOST = 34.231.155.96
+# AWS_ROOT_DIR_PATH = /home/ubuntu/
+# AWS_USER = ubuntu
+# SSH_PRIVATE_KEY = You have to generate it with ssh-keygen
+
+# Into Security Groups, add Inbound rules to open ports 8000 and 8501 with Source: 0.0.0.0/0
+
+name: Deploy to EC2 (AWS)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
+
+    - name: Adding Known Hosts
+      run: |
+        mkdir -p ~/.ssh
+        if [[ -n "${{ secrets.AWS_HOST }}" ]]; then
+          echo "Adding ${{ secrets.AWS_HOST }} to known_hosts..."
+          ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          if [[ $? -ne 0 ]]; then
+            echo "Failed to add ${{ secrets.AWS_HOST }} to known_hosts. Check host accessibility."
+            exit 1
+          fi
+        else
+          echo "AWS_HOST secret is empty or undefined."
+          exit 1
+        fi
+        chmod 700 ~/.ssh
+        chmod 600 ~/.ssh/known_hosts
+
+    - name: Deploy with rsync
+      run: |
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./* ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:${{ secrets.AWS_ROOT_DIR_PATH }}
+
+    - name: Clean up Docker dependencies
+      run: |
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} "sudo apt-get remove -y docker docker-engine docker.io containerd runc || true"
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} "sudo apt-get autoremove -y"
+
+    - name: Install Docker
+      run: |
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} <<'EOF'
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg lsb-release
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+          sudo systemctl start docker
+          sudo systemctl enable docker
+        EOF
+
+    - name: Install Docker Compose
+      run: |
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} <<'EOF'
+          DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          sudo curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          # Remove the symlink if it already exists to avoid conflict
+          if [ -L /usr/bin/docker-compose ]; then
+            sudo rm /usr/bin/docker-compose
+          fi
+          sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+        EOF
+
+    - name: Verify Docker and Docker Compose Installation
+      run: |
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} <<'EOF'
+          docker --version
+          docker-compose --version
+        EOF
+
+    - name: Run Docker Compose
+      run: |
+        ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} "sudo docker-compose -f ${{ secrets.AWS_ROOT_DIR_PATH }}docker-compose.yml up -d"
